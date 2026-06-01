@@ -17,8 +17,29 @@ const DEMO_USERS = {
   'kulsum001211@gmail.com': { password: '7898360786', role: 'user', name: 'Kulsum mam' }
 };
 
+// Allowed to import data
+const ALLOWED_IMPORTERS = ['nikishsatija@gmail.com', 'kashish.mehta23@gmail.com', 'principal@dpschhindwara.com', 'dpshrutika@gmail.com', 'priyanshiofficial18@gmail.com'];
+
+// Allowed to assign leads
+const ALLOWED_ASSIGNERS = ['principal@dpschhindwara.com', 'dpshrutika@gmail.com', 'priyanshiofficial18@gmail.com'];
+
+// Allowed to export
+const ALLOWED_EXPORTERS = ['nikishsatija@gmail.com', 'kashish.mehta23@gmail.com', 'principal@dpschhindwara.com'];
+
+// Counselors list
+const COUNSELORS = [
+  { email: 'ashishfalke178@gmail.com', name: 'Ashish Sir' },
+  { email: 'dharmendralokmat@gmail.com', name: 'Jaiswal Sir' },
+  { email: 'pammushriwastav123@gmail.com', name: 'Pramod Sir' },
+  { email: 'gauravarora1838@gmail.com', name: 'Gaurav Sir' },
+  { email: 'niteshpathe1982@gmail.com', name: 'Nitesh Sir' },
+  { email: 'santosh.forver@gmail.com', name: 'Mishra Sir' },
+  { email: 'aryanpal5652@gmail.com', name: 'Devlal Sir' },
+  { email: 'kulsum001211@gmail.com', name: 'Kulsum mam' }
+];
+
 const SAMPLE_LEADS = [
-  { id: 1, name: 'Rajesh Kumar', phone: '+91 98765 43210', email: 'rajesh@email.com', class: 'Class 9', source: 'Website', status: 'interested', notes: 'Very interested', date: '2024-05-20', calls: [], reminders: [] },
+  { id: 1, name: 'Rajesh Kumar', phone: '+91 98765 43210', email: 'rajesh@email.com', class: 'Class 9', source: 'Website', status: 'interested', notes: 'Very interested', date: '2024-05-20', calls: [], reminders: [], assignedTo: null, assignmentHistory: [], admissionStatus: 'pending', lockedBy: null, lockDate: null, lockReason: null },
 ];
 
 function LoginPage({ onLogin }) {
@@ -61,16 +82,23 @@ function LoginPage({ onLogin }) {
   );
 }
 
-function LeadDetailsModal({ lead, onClose, onAddCall, onAddReminder, canDelete, onDelete }) {
+function LeadDetailsModal({ lead, onClose, user, onAddCall, onAddReminder, onAssign, onLock, onUnlock, leads }) {
+  const [showAssignmentHistory, setShowAssignmentHistory] = useState(false);
+  const isLocked = lead.admissionStatus === 'admitted';
+  const canAssign = ALLOWED_ASSIGNERS.includes(user.email);
+  const canLock = ['nikishsatija@gmail.com', 'kashish.mehta23@gmail.com', 'principal@dpschhindwara.com'].includes(user.email);
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>👤 {lead.name}</h2>
+          <h2>👤 {lead.name} {isLocked && '🔒'}</h2>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
 
         <div className="modal-body">
+          {isLocked && <div className="lock-notice">⚠️ This lead is LOCKED (Admission Done)</div>}
+          
           <div className="detail-section">
             <h3>📋 Basic Information</h3>
             <div className="detail-grid">
@@ -83,13 +111,36 @@ function LeadDetailsModal({ lead, onClose, onAddCall, onAddReminder, canDelete, 
             </div>
           </div>
 
-          {lead.notes && (
+          {lead.notes && <div className="detail-section"><h3>📝 Notes</h3><p>{lead.notes}</p></div>}
+
+          {/* Assignment Section */}
+          {canAssign && (
             <div className="detail-section">
-              <h3>📝 Notes</h3>
-              <p>{lead.notes}</p>
+              <h3>👤 Assign to Counselor</h3>
+              <select onChange={(e) => onAssign(lead.id, e.target.value)} disabled={isLocked}>
+                <option value="">Select Counselor...</option>
+                {COUNSELORS.map(c => <option key={c.email} value={c.email}>{c.name}</option>)}
+              </select>
+              {lead.assignedTo && (
+                <p>Currently assigned to: <strong>{COUNSELORS.find(c => c.email === lead.assignedTo)?.name || lead.assignedTo}</strong></p>
+              )}
             </div>
           )}
 
+          {/* Lock/Unlock Section */}
+          {canLock && (
+            <div className="detail-section">
+              <h3>🔒 Admission Status</h3>
+              {!isLocked ? (
+                <button onClick={() => onLock(lead.id)} className="btn-lock">Mark as Admitted (Lock)</button>
+              ) : (
+                <button onClick={() => onUnlock(lead.id)} className="btn-unlock">Unlock Lead</button>
+              )}
+              {lead.lockDate && <p>Locked on: {lead.lockDate} by {DEMO_USERS[lead.lockedBy]?.name}</p>}
+            </div>
+          )}
+
+          {/* Call History */}
           {lead.calls && lead.calls.length > 0 && (
             <div className="detail-section">
               <h3>📞 Call History ({lead.calls.length} calls)</h3>
@@ -97,362 +148,393 @@ function LeadDetailsModal({ lead, onClose, onAddCall, onAddReminder, canDelete, 
                 {lead.calls.map((call, idx) => (
                   <div key={idx} className="call-item">
                     <div className="call-header">{call.date} at {call.time}</div>
-                    <div className="call-details">
-                      <p><strong>Duration:</strong> {call.duration}</p>
-                      <p><strong>Outcome:</strong> {call.outcome}</p>
-                      <p><strong>Notes:</strong> {call.notes}</p>
-                    </div>
+                    <div className="call-details">Duration: {call.duration} | Outcome: {call.outcome}</div>
+                    {call.notes && <div className="call-notes">{call.notes}</div>}
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {lead.reminders && lead.reminders.length > 0 && (
+          {/* Assignment History */}
+          {lead.assignmentHistory && lead.assignmentHistory.length > 0 && (
             <div className="detail-section">
-              <h3>⏰ Reminders ({lead.reminders.length})</h3>
-              <div className="reminder-list">
-                {lead.reminders.map((reminder, idx) => (
-                  <div key={idx} className="reminder-item">
-                    <div className="reminder-header">{reminder.scheduledDate} at {reminder.scheduledTime}</div>
-                    <p><strong>Type:</strong> {reminder.type}</p>
-                    <p><strong>Description:</strong> {reminder.description}</p>
-                    {reminder.notificationMethod && <p><strong>Notification:</strong> {reminder.notificationMethod}</p>}
-                  </div>
-                ))}
-              </div>
+              <h3>📋 Assignment History</h3>
+              <button onClick={() => setShowAssignmentHistory(!showAssignmentHistory)} className="btn-secondary">
+                {showAssignmentHistory ? 'Hide' : 'Show'} History
+              </button>
+              {showAssignmentHistory && (
+                <div className="assignment-history">
+                  {lead.assignmentHistory.map((assignment, idx) => (
+                    <div key={idx} className="assignment-item">
+                      <p><strong>{DEMO_USERS[assignment.assignedBy]?.name}</strong> assigned to <strong>{COUNSELORS.find(c => c.email === assignment.assignedTo)?.name}</strong></p>
+                      <p className="assignment-date">{assignment.date}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
-          <div className="detail-section">
-            <h3>⚙️ Actions</h3>
-            <div className="action-buttons">
-              <button className="btn-action" onClick={onAddCall}>📞 Log Call</button>
-              <button className="btn-action" onClick={onAddReminder}>⏰ Set Reminder</button>
-              {canDelete && <button className="btn-action btn-delete" onClick={onDelete}>🗑️ Delete</button>}
-            </div>
+          {/* Action Buttons */}
+          <div className="modal-actions">
+            {!isLocked && (
+              <>
+                <button onClick={() => onAddCall(lead.id)} className="btn-secondary">📞 Log Call</button>
+                <button onClick={() => onAddReminder(lead.id)} className="btn-secondary">⏰ Set Reminder</button>
+              </>
+            )}
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function LogCallModal({ lead, onClose, onSave }) {
-  const [duration, setDuration] = useState('');
-  const [outcome, setOutcome] = useState('interested');
-  const [notes, setNotes] = useState('');
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (duration && outcome && notes) {
-      onSave({ date: new Date().toLocaleDateString(), time: new Date().toLocaleTimeString(), duration: duration + ' min', outcome, notes });
-      onClose();
-    }
-  };
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content modal-medium" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header"><h2>📞 Log Call</h2><button className="modal-close" onClick={onClose}>✕</button></div>
-        <form onSubmit={handleSubmit}>
-          <div className="form-group"><label>Duration (minutes)</label><input type="number" value={duration} onChange={(e) => setDuration(e.target.value)} placeholder="15" required /></div>
-          <div className="form-group"><label>Outcome</label><select value={outcome} onChange={(e) => setOutcome(e.target.value)}><option value="interested">Interested</option><option value="not-interested">Not Interested</option><option value="callback">Schedule Callback</option><option value="voicemail">Left Voicemail</option></select></div>
-          <div className="form-group"><label>Notes</label><textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="What was discussed?" rows="4" required></textarea></div>
-          <div style={{display:'flex',gap:'10px'}}><button type="submit" className="btn-primary" style={{flex:1}}>Save</button><button type="button" className="btn-secondary" onClick={onClose}>Cancel</button></div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function ReminderModal({ lead, onClose, onSave }) {
-  const [type, setType] = useState('followup');
-  const [date, setDate] = useState('');
-  const [time, setTime] = useState('10:00');
-  const [description, setDescription] = useState('');
-  const [notificationMethod, setNotificationMethod] = useState('whatsapp');
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (date && description) {
-      onSave({ type, scheduledDate: date, scheduledTime: time, description, notificationMethod });
-      onClose();
-    }
-  };
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content modal-medium" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header"><h2>⏰ Set Reminder</h2><button className="modal-close" onClick={onClose}>✕</button></div>
-        <form onSubmit={handleSubmit}>
-          <div className="form-group"><label>Type</label><select value={type} onChange={(e) => setType(e.target.value)}><option value="followup">Follow-up Call</option><option value="send-docs">Send Documents</option><option value="visit">Campus Visit</option></select></div>
-          <div className="form-group"><label>Date</label><input type="date" value={date} onChange={(e) => setDate(e.target.value)} required /></div>
-          <div className="form-group"><label>Time</label><input type="time" value={time} onChange={(e) => setTime(e.target.value)} /></div>
-          <div className="form-group"><label>Description</label><textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What do you need to do?" rows="3" required></textarea></div>
-          
-          <div className="notification-section">
-            <h3>📲 How to notify?</h3>
-            <div className="notification-options">
-              <label className="notification-option">
-                <input type="radio" value="whatsapp" checked={notificationMethod === 'whatsapp'} onChange={(e) => setNotificationMethod(e.target.value)} />
-                <span>💬 WhatsApp</span>
-              </label>
-              <label className="notification-option">
-                <input type="radio" value="sms" checked={notificationMethod === 'sms'} onChange={(e) => setNotificationMethod(e.target.value)} />
-                <span>📱 SMS</span>
-              </label>
-              <label className="notification-option">
-                <input type="radio" value="email" checked={notificationMethod === 'email'} onChange={(e) => setNotificationMethod(e.target.value)} />
-                <span>📧 Email</span>
-              </label>
-            </div>
-          </div>
-
-          <div style={{display:'flex',gap:'10px'}}><button type="submit" className="btn-primary" style={{flex:1}}>Set Reminder</button><button type="button" className="btn-secondary" onClick={onClose}>Cancel</button></div>
-        </form>
       </div>
     </div>
   );
 }
 
 function App() {
-  const [user, setUser] = useState(null);
-  const [leads, setLeads] = useState(SAMPLE_LEADS);
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem('user');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const [leads, setLeads] = useState(() => {
+    const saved = localStorage.getItem('dpscrm_leads');
+    return saved ? JSON.parse(saved) : SAMPLE_LEADS;
+  });
+
+  const [selectedLead, setSelectedLead] = useState(null);
+  const [showReports, setShowReports] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedLeadModal, setSelectedLeadModal] = useState(null);
-  const [showCallModal, setShowCallModal] = useState(false);
-  const [showReminderModal, setShowReminderModal] = useState(false);
-  const [showReportModal, setShowReportModal] = useState(false);
 
-  useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) setUser(JSON.parse(savedUser));
-    const savedLeads = localStorage.getItem('dpscrm_leads');
-    if (savedLeads) try { setLeads(JSON.parse(savedLeads)); } catch (e) { }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('dpscrm_leads', JSON.stringify(leads));
-  }, [leads]);
-
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    setUser(null);
-  };
-
-  const addLead = () => {
-    const name = prompt('Lead Name:');
-    if (name) {
-      const phone = prompt('Phone:');
-      const email = prompt('Email:');
-      const classVal = prompt('Class:');
-      const newLead = {
-        id: Math.max(...leads.map(l => l.id), 0) + 1,
-        name,
-        phone: phone || '+91',
-        email: email || '',
-        class: classVal || 'N/A',
-        source: 'Manual',
-        status: 'new',
-        notes: '',
-        date: new Date().toISOString().split('T')[0],
-        calls: [],
-        reminders: []
-      };
-      setLeads([...leads, newLead]);
-      alert('Lead added!');
+  // Filter leads based on user role
+  const getVisibleLeads = () => {
+    let visible = leads;
+    
+    // If counselor, show only assigned leads
+    if (user.role === 'user' && !ALLOWED_ASSIGNERS.includes(user.email)) {
+      visible = leads.filter(lead => lead.assignedTo === user.email);
     }
+    
+    // Apply search filter
+    if (searchTerm) {
+      visible = visible.filter(lead => 
+        lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lead.phone.includes(searchTerm)
+      );
+    }
+    
+    return visible;
   };
 
-  const handleExcelImport = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = e.target.result;
-        const rows = data.split('\n');
-        const headers = rows[0].split(',').map(h => h.trim().toLowerCase());
-        const newLeads = [];
-        for (let i = 1; i < rows.length; i++) {
-          if (!rows[i].trim()) continue;
-          const values = rows[i].split(',');
-          const leadObj = {};
-          headers.forEach((header, index) => {
-            const value = values[index] ? values[index].trim() : '';
-            if (header === 'name') leadObj.name = value;
-            else if (header === 'phone') leadObj.phone = value;
-            else if (header === 'email') leadObj.email = value;
-            else if (header === 'class') leadObj.class = value;
-            else if (header === 'source') leadObj.source = value;
-            else if (header === 'status') leadObj.status = value;
-            else if (header === 'notes') leadObj.notes = value;
-          });
-          if (leadObj.name && leadObj.phone) {
-            newLeads.push({
-              id: Math.max(...leads.map(l => l.id), 0) + newLeads.length + 1,
-              name: leadObj.name,
-              phone: leadObj.phone,
-              email: leadObj.email || '',
-              class: leadObj.class || 'N/A',
-              source: leadObj.source || 'Imported',
-              status: leadObj.status || 'new',
-              notes: leadObj.notes || '',
-              date: new Date().toISOString().split('T')[0],
-              calls: [],
-              reminders: []
-            });
-          }
-        }
-        if (newLeads.length > 0) {
-          setLeads([...leads, ...newLeads]);
-          alert(`Imported ${newLeads.length} leads!`);
-        }
-      } catch (error) {
-        alert('Error reading file');
-      }
+  const handleAddLead = () => {
+    const newLead = {
+      id: Date.now(),
+      name: 'New Lead',
+      phone: '',
+      email: '',
+      class: '',
+      source: '',
+      status: 'new',
+      notes: '',
+      date: new Date().toISOString().split('T')[0],
+      calls: [],
+      reminders: [],
+      assignedTo: null,
+      assignmentHistory: [],
+      admissionStatus: 'pending',
+      lockedBy: null,
+      lockDate: null
     };
-    reader.readAsText(file);
+    setLeads([...leads, newLead]);
   };
 
-  const saveCallLog = (callData) => {
-    const updatedLeads = leads.map(lead =>
-      lead.id === selectedLeadModal.id ? { ...lead, calls: [...(lead.calls || []), callData] } : lead
-    );
-    setLeads(updatedLeads);
-    setSelectedLeadModal(updatedLeads.find(l => l.id === selectedLeadModal.id));
-    setShowCallModal(false);
-    alert('Call logged!');
+  const handleAssignLead = (leadId, counselorEmail) => {
+    if (!counselorEmail) return;
+    
+    setLeads(leads.map(lead => {
+      if (lead.id === leadId) {
+        const newHistory = [...(lead.assignmentHistory || [])];
+        if (lead.assignedTo) {
+          newHistory.push({
+            assignedBy: lead.assignedTo,
+            assignedTo: counselorEmail,
+            date: new Date().toLocaleString(),
+            notes: 'Reassignment'
+          });
+        } else {
+          newHistory.push({
+            assignedBy: user.email,
+            assignedTo: counselorEmail,
+            date: new Date().toLocaleString(),
+            notes: 'Initial assignment'
+          });
+        }
+        return { ...lead, assignedTo: counselorEmail, assignmentHistory: newHistory };
+      }
+      return lead;
+    }));
+    alert('Lead assigned successfully!');
   };
 
-  const saveReminder = (reminderData) => {
-    const updatedLeads = leads.map(lead =>
-      lead.id === selectedLeadModal.id ? { ...lead, reminders: [...(lead.reminders || []), reminderData] } : lead
-    );
-    setLeads(updatedLeads);
-    setSelectedLeadModal(updatedLeads.find(l => l.id === selectedLeadModal.id));
-    setShowReminderModal(false);
-    alert(`Reminder set! Will send notification via ${reminderData.notificationMethod.toUpperCase()}`);
+  const handleLockLead = (leadId) => {
+    setLeads(leads.map(lead => 
+      lead.id === leadId 
+        ? { ...lead, admissionStatus: 'admitted', lockedBy: user.email, lockDate: new Date().toLocaleString() }
+        : lead
+    ));
+    alert('Lead locked (Admission marked)!');
   };
 
-  const deleteLead = (leadId) => {
-    if (user.role !== 'director') {
-      alert('Only Directors can delete leads!');
+  const handleUnlockLead = (leadId) => {
+    setLeads(leads.map(lead => 
+      lead.id === leadId 
+        ? { ...lead, admissionStatus: 'pending', lockedBy: null, lockDate: null }
+        : lead
+    ));
+    alert('Lead unlocked!');
+  };
+
+  const handleExportExcel = () => {
+    if (!ALLOWED_EXPORTERS.includes(user.email)) {
+      alert('❌ Only Director and Principal can export data!');
       return;
     }
-    if (window.confirm('Delete this lead?')) {
-      setLeads(leads.filter(l => l.id !== leadId));
-      setSelectedLeadModal(null);
+
+    const csvContent = [
+      ['ID', 'Name', 'Phone', 'Email', 'Class', 'Source', 'Status', 'Assigned To', 'Total Calls', 'Admission Status', 'Date Added'],
+      ...leads.map(lead => [
+        lead.id,
+        lead.name,
+        lead.phone,
+        lead.email,
+        lead.class,
+        lead.source,
+        lead.status,
+        COUNSELORS.find(c => c.email === lead.assignedTo)?.name || 'Unassigned',
+        lead.calls?.length || 0,
+        lead.admissionStatus,
+        lead.date
+      ])
+    ].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `DPS_CRM_Report_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  };
+
+  const handleExportReport = () => {
+    if (!ALLOWED_EXPORTERS.includes(user.email)) {
+      alert('❌ Only Director and Principal can export reports!');
+      return;
     }
+
+    // Generate comprehensive report
+    const totalLeads = leads.length;
+    const interesteds = leads.filter(l => l.status === 'interested').length;
+    const contacted = leads.filter(l => l.status === 'contacted').length;
+    const admitted = leads.filter(l => l.admissionStatus === 'admitted').length;
+    const totalCalls = leads.reduce((sum, lead) => sum + (lead.calls?.length || 0), 0);
+
+    const reportText = `
+DPS SCHOOL - CRM ANALYSIS REPORT
+Generated: ${new Date().toLocaleString()}
+
+=== OVERALL STATISTICS ===
+Total Leads: ${totalLeads}
+Interested Leads: ${interesteds} (${((interesteds/totalLeads)*100).toFixed(1)}%)
+Contacted Leads: ${contacted} (${((contacted/totalLeads)*100).toFixed(1)}%)
+Admitted Leads: ${admitted} (${((admitted/totalLeads)*100).toFixed(1)}%)
+Total Calls Made: ${totalCalls}
+Average Calls per Lead: ${(totalCalls/totalLeads).toFixed(1)}
+
+=== PER COUNSELOR BREAKDOWN ===
+${COUNSELORS.map(counselor => {
+  const counselorLeads = leads.filter(l => l.assignedTo === counselor.email);
+  const counselorCalls = counselorLeads.reduce((sum, l) => sum + (l.calls?.length || 0), 0);
+  return `
+${counselor.name}:
+  - Assigned Leads: ${counselorLeads.length}
+  - Total Calls: ${counselorCalls}
+  - Interested: ${counselorLeads.filter(l => l.status === 'interested').length}
+  - Contacted: ${counselorLeads.filter(l => l.status === 'contacted').length}
+  - Conversion Rate: ${counselorLeads.length > 0 ? ((counselorLeads.filter(l => l.status === 'interested').length/counselorLeads.length)*100).toFixed(1) : 0}%`;
+}).join('\n')}
+
+=== DETAILED LEAD LIST ===
+${leads.map(lead => `
+Lead: ${lead.name}
+Phone: ${lead.phone}
+Class: ${lead.class}
+Status: ${lead.status}
+Assigned To: ${COUNSELORS.find(c => c.email === lead.assignedTo)?.name || 'Unassigned'}
+Calls Made: ${lead.calls?.length || 0}
+Date Added: ${lead.date}
+Notes: ${lead.notes || 'N/A'}
+---`).join('\n')}
+
+=== RECOMMENDATIONS ===
+- Focus on leads with status 'new' for follow-up
+- Check conversion rates per counselor
+- Track call history for effectiveness
+- Regular assignment updates improve efficiency
+
+This report can be analyzed with Claude AI for deeper insights.
+    `;
+
+    const blob = new Blob([reportText], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `DPS_CRM_Analysis_Report_${new Date().toISOString().split('T')[0]}.txt`;
+    a.click();
+  };
+
+  const handleImportData = () => {
+    if (!ALLOWED_IMPORTERS.includes(user.email)) {
+      alert('❌ Only authorized users can import data!');
+      return;
+    }
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv';
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const csv = event.target.result;
+          const lines = csv.split('\n');
+          const newLeads = lines.slice(1).map((line, idx) => {
+            const [id, name, phone, email, className, source, status] = line.split(',').map(s => s.replace(/"/g, '').trim());
+            if (!name) return null;
+            return {
+              id: parseInt(id) || Date.now() + idx,
+              name,
+              phone,
+              email,
+              class: className,
+              source,
+              status: status || 'new',
+              notes: '',
+              date: new Date().toISOString().split('T')[0],
+              calls: [],
+              reminders: [],
+              assignedTo: null,
+              assignmentHistory: [],
+              admissionStatus: 'pending'
+            };
+          }).filter(Boolean);
+
+          setLeads([...leads, ...newLeads]);
+          alert(`✅ Imported ${newLeads.length} leads successfully!`);
+        } catch (error) {
+          alert('❌ Error importing data: ' + error.message);
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
   };
 
   if (!user) return <LoginPage onLogin={setUser} />;
 
-  const filteredLeads = leads.filter(lead =>
-    lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    lead.phone.includes(searchTerm) ||
-    lead.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const pendingReminders = leads.reduce((sum, l) => sum + (l.reminders ? l.reminders.length : 0), 0);
-  const totalCalls = leads.reduce((sum, l) => sum + (l.calls ? l.calls.length : 0), 0);
+  const visibleLeads = getVisibleLeads();
+  const canExport = ALLOWED_EXPORTERS.includes(user.email);
+  const canImport = ALLOWED_IMPORTERS.includes(user.email);
 
   return (
     <div className="app-container">
-      <nav className="navbar">
-        <div className="navbar-content">
-          <div className="navbar-brand">📚 DPS CRM</div>
-          <div className="navbar-menu">
-            <button className="nav-item active">Dashboard</button>
-            <button className="nav-item">Leads</button>
-            {(user.role === 'admin' || user.role === 'director') && <button className="nav-item" onClick={() => setShowReportModal(true)}>📊 Reports</button>}
-          </div>
-          <div className="navbar-user">
-            <span>{user.name}</span>
-            <button className="btn-logout" onClick={handleLogout}>Logout</button>
-          </div>
+      <header className="app-header">
+        <h1>📚 DPS CRM - Lead Management</h1>
+        <div className="header-right">
+          <span>Welcome, {user.name}</span>
+          <button onClick={() => { localStorage.clear(); setUser(null); }} className="btn-logout">Logout</button>
         </div>
-      </nav>
+      </header>
 
-      <main className="main-content">
-        <div className="page-header">
-          <h1>📊 Lead Management Dashboard</h1>
-          <div className="header-stats">
-            <div className="stat-box"><span className="stat-number">{leads.length}</span><span className="stat-label">Total Leads</span></div>
-            <div className="stat-box"><span className="stat-number">{leads.filter(l => l.status === 'interested').length}</span><span className="stat-label">Interested</span></div>
-            <div className="stat-box"><span className="stat-number">{pendingReminders}</span><span className="stat-label">Pending Reminders</span></div>
-            <div className="stat-box"><span className="stat-number">{totalCalls}</span><span className="stat-label">Total Calls</span></div>
-          </div>
-        </div>
+      <div className="toolbar">
+        <input type="text" placeholder="🔍 Search by name or phone..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+        {canImport && <button onClick={handleImportData} className="btn-secondary">📥 Import</button>}
+        {canExport && <button onClick={handleExportExcel} className="btn-secondary">📊 Export Excel</button>}
+        {canExport && <button onClick={handleExportReport} className="btn-secondary">📋 Export Report</button>}
+        <button onClick={() => setShowReports(!showReports)} className="btn-secondary">📈 Reports</button>
+        <button onClick={handleAddLead} className="btn-primary">➕ Add Lead</button>
+      </div>
 
-        <div className="leads-toolbar">
-          <input type="text" placeholder="🔍 Search by name, phone, or email..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="search-input" />
-          <div style={{display:'flex',gap:'10px'}}>
-            <label className="btn-primary" style={{cursor:'pointer',margin:0}}>📥 Import<input type="file" accept=".csv" onChange={handleExcelImport} style={{display:'none'}} /></label>
-            <button className="btn-primary" onClick={addLead}>+ Add Lead</button>
-          </div>
-        </div>
-
-        <div className="table-container">
-          <table className="leads-table">
-            <thead>
-              <tr>
-                <th>👤 Name</th>
-                <th>📞 Phone</th>
-                <th>📚 Class</th>
-                <th>📊 Status</th>
-                <th>📞 Calls</th>
-                <th>⏰ Reminders</th>
-                <th>📅 Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredLeads.map(lead => (
-                <tr key={lead.id} className="lead-row">
-                  <td><button className="link-button" onClick={() => setSelectedLeadModal(lead)}>{lead.name}</button></td>
-                  <td>{lead.phone}</td>
-                  <td>{lead.class}</td>
-                  <td><span className={`status-badge ${lead.status}`}>{lead.status}</span></td>
-                  <td><span className="count-badge">{lead.calls ? lead.calls.length : 0}</span></td>
-                  <td><span className="count-badge reminder">{lead.reminders ? lead.reminders.length : 0}</span></td>
-                  <td>{lead.date}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </main>
-
-      {selectedLeadModal && (
-        <LeadDetailsModal
-          lead={selectedLeadModal}
-          onClose={() => setSelectedLeadModal(null)}
-          onAddCall={() => setShowCallModal(true)}
-          onAddReminder={() => setShowReminderModal(true)}
-          canDelete={user.role === 'director'}
-          onDelete={() => deleteLead(selectedLeadModal.id)}
-        />
-      )}
-
-      {showCallModal && selectedLeadModal && <LogCallModal lead={selectedLeadModal} onClose={() => setShowCallModal(false)} onSave={saveCallLog} />}
-      {showReminderModal && selectedLeadModal && <ReminderModal lead={selectedLeadModal} onClose={() => setShowReminderModal(false)} onSave={saveReminder} />}
-
-      {showReportModal && (
-        <div className="modal-overlay" onClick={() => setShowReportModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header"><h2>📊 CRM Report</h2><button className="modal-close" onClick={() => setShowReportModal(false)}>✕</button></div>
-            <div style={{padding:'20px'}}>
-              <div style={{marginBottom:'20px'}}>
-                <h3>Lead Statistics</h3>
-                <p>Total: <strong>{leads.length}</strong></p>
-                <p>Interested: <strong>{leads.filter(l => l.status === 'interested').length}</strong></p>
-                <p>Conversion Rate: <strong>{leads.length > 0 ? ((leads.filter(l => l.status === 'interested').length / leads.length) * 100).toFixed(1) : 0}%</strong></p>
-              </div>
-              <button className="btn-primary" onClick={() => window.print()}>🖨️ Print</button>
+      {showReports && (
+        <div className="reports-section">
+          <h2>📊 Detailed Reports</h2>
+          <div className="report-cards">
+            <div className="report-card">
+              <h3>Total Leads</h3>
+              <p className="big-number">{visibleLeads.length}</p>
+            </div>
+            <div className="report-card">
+              <h3>Interested</h3>
+              <p className="big-number">{visibleLeads.filter(l => l.status === 'interested').length}</p>
+            </div>
+            <div className="report-card">
+              <h3>Contacted</h3>
+              <p className="big-number">{visibleLeads.filter(l => l.status === 'contacted').length}</p>
+            </div>
+            <div className="report-card">
+              <h3>Total Calls</h3>
+              <p className="big-number">{visibleLeads.reduce((sum, l) => sum + (l.calls?.length || 0), 0)}</p>
             </div>
           </div>
+
+          {ALLOWED_EXPORTERS.includes(user.email) && (
+            <div className="counselor-reports">
+              <h3>👥 Per Counselor Analysis</h3>
+              {COUNSELORS.map(counselor => {
+                const counselorLeads = leads.filter(l => l.assignedTo === counselor.email);
+                if (counselorLeads.length === 0) return null;
+                const calls = counselorLeads.reduce((sum, l) => sum + (l.calls?.length || 0), 0);
+                const interested = counselorLeads.filter(l => l.status === 'interested').length;
+                return (
+                  <div key={counselor.email} className="counselor-card">
+                    <h4>{counselor.name}</h4>
+                    <p>Leads: {counselorLeads.length} | Calls: {calls} | Interested: {interested} | Conversion: {((interested/counselorLeads.length)*100).toFixed(1)}%</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
+      )}
+
+      <div className="leads-list">
+        {visibleLeads.map(lead => (
+          <div key={lead.id} className={`lead-card ${lead.admissionStatus === 'admitted' ? 'locked' : ''}`} onClick={() => setSelectedLead(lead)}>
+            <div className="lead-header">
+              <h3>{lead.name} {lead.admissionStatus === 'admitted' && '🔒'}</h3>
+              <span className={`status-badge ${lead.status}`}>{lead.status}</span>
+            </div>
+            <p>📞 {lead.phone}</p>
+            <p>📚 {lead.class}</p>
+            <p>👤 {COUNSELORS.find(c => c.email === lead.assignedTo)?.name || 'Unassigned'}</p>
+            <div className="lead-badges">
+              <span className="badge">📞 {lead.calls?.length || 0} calls</span>
+              <span className="badge">⏰ {lead.reminders?.length || 0} reminders</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {selectedLead && (
+        <LeadDetailsModal 
+          lead={selectedLead} 
+          onClose={() => setSelectedLead(null)} 
+          user={user}
+          onAssign={handleAssignLead}
+          onLock={handleLockLead}
+          onUnlock={handleUnlockLead}
+          leads={leads}
+        />
       )}
     </div>
   );
