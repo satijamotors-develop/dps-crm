@@ -17,16 +17,10 @@ const DEMO_USERS = {
   'kulsum001211@gmail.com': { password: '7898360786', role: 'user', name: 'Kulsum mam' }
 };
 
-// Allowed to import data
 const ALLOWED_IMPORTERS = ['nikishsatija@gmail.com', 'kashish.mehta23@gmail.com', 'principal@dpschhindwara.com', 'dpshrutika@gmail.com', 'priyanshiofficial18@gmail.com'];
-
-// Allowed to assign leads
 const ALLOWED_ASSIGNERS = ['principal@dpschhindwara.com', 'dpshrutika@gmail.com', 'priyanshiofficial18@gmail.com'];
-
-// Allowed to export
 const ALLOWED_EXPORTERS = ['nikishsatija@gmail.com', 'kashish.mehta23@gmail.com', 'principal@dpschhindwara.com'];
 
-// Counselors list
 const COUNSELORS = [
   { email: 'ashishfalke178@gmail.com', name: 'Ashish Sir' },
   { email: 'dharmendralokmat@gmail.com', name: 'Jaiswal Sir' },
@@ -39,7 +33,7 @@ const COUNSELORS = [
 ];
 
 const SAMPLE_LEADS = [
-  { id: 1, name: 'Rajesh Kumar', phone: '+91 98765 43210', email: 'rajesh@email.com', class: 'Class 9', source: 'Website', status: 'interested', notes: 'Very interested', date: '2024-05-20', calls: [], reminders: [], assignedTo: null, assignmentHistory: [], admissionStatus: 'pending', lockedBy: null, lockDate: null, lockReason: null },
+  { id: 1, name: 'Rajesh Kumar', phone: '+91 98765 43210', email: 'rajesh@email.com', class: 'Class 9', source: 'Website', status: 'interested', notes: 'Very interested', date: '2024-05-20', calls: [], reminders: [], assignedTo: null, assignmentHistory: [], admissionStatus: 'pending', lockedBy: null, lockDate: null },
 ];
 
 function LoginPage({ onLogin }) {
@@ -64,6 +58,7 @@ function LoginPage({ onLogin }) {
         <div className="login-header">
           <h1>📚 DPS CRM</h1>
           <p>Lead Management System</p>
+          <p className="subtitle">Delhi Public School - Admissions Management</p>
         </div>
         <form onSubmit={handleLogin}>
           <div className="form-group">
@@ -82,7 +77,7 @@ function LoginPage({ onLogin }) {
   );
 }
 
-function LeadDetailsModal({ lead, onClose, user, onAddCall, onAddReminder, onAssign, onLock, onUnlock, leads }) {
+function LeadDetailsModal({ lead, onClose, user, onAddCall, onAddReminder, onAssign, onLock, onUnlock }) {
   const [showAssignmentHistory, setShowAssignmentHistory] = useState(false);
   const isLocked = lead.admissionStatus === 'admitted';
   const canAssign = ALLOWED_ASSIGNERS.includes(user.email);
@@ -113,7 +108,6 @@ function LeadDetailsModal({ lead, onClose, user, onAddCall, onAddReminder, onAss
 
           {lead.notes && <div className="detail-section"><h3>📝 Notes</h3><p>{lead.notes}</p></div>}
 
-          {/* Assignment Section */}
           {canAssign && (
             <div className="detail-section">
               <h3>👤 Assign to Counselor</h3>
@@ -127,7 +121,6 @@ function LeadDetailsModal({ lead, onClose, user, onAddCall, onAddReminder, onAss
             </div>
           )}
 
-          {/* Lock/Unlock Section */}
           {canLock && (
             <div className="detail-section">
               <h3>🔒 Admission Status</h3>
@@ -140,7 +133,6 @@ function LeadDetailsModal({ lead, onClose, user, onAddCall, onAddReminder, onAss
             </div>
           )}
 
-          {/* Call History */}
           {lead.calls && lead.calls.length > 0 && (
             <div className="detail-section">
               <h3>📞 Call History ({lead.calls.length} calls)</h3>
@@ -156,7 +148,6 @@ function LeadDetailsModal({ lead, onClose, user, onAddCall, onAddReminder, onAss
             </div>
           )}
 
-          {/* Assignment History */}
           {lead.assignmentHistory && lead.assignmentHistory.length > 0 && (
             <div className="detail-section">
               <h3>📋 Assignment History</h3>
@@ -176,7 +167,6 @@ function LeadDetailsModal({ lead, onClose, user, onAddCall, onAddReminder, onAss
             </div>
           )}
 
-          {/* Action Buttons */}
           <div className="modal-actions">
             {!isLocked && (
               <>
@@ -187,6 +177,62 @@ function LeadDetailsModal({ lead, onClose, user, onAddCall, onAddReminder, onAss
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function FilterSection({ filters, onFilterChange, onClearFilters }) {
+  const statusOptions = ['All', 'New', 'Interested', 'Contacted', 'Admitted'];
+  const dateOptions = ['All', 'Last 7 days', 'Last 30 days', 'Last 90 days'];
+  const assignmentOptions = ['All', 'Assigned', 'Unassigned'];
+  const classOptions = ['All', 'Class 1-2', 'Class 3-5', 'Class 6-8', 'Class 9-10', 'Class 11-12'];
+  const sourceOptions = ['All', 'Website', 'Master Import', 'Phone Call', 'Others'];
+  const sortOptions = ['Newest First', 'Oldest First', 'Name A-Z', 'Name Z-A', 'Most Calls'];
+
+  const hasActiveFilters = Object.values(filters).some(v => v !== 'All' && v !== 'Newest First');
+
+  return (
+    <div className="filter-section">
+      <h3>🔍 FILTERS</h3>
+      <div className="filter-grid">
+        <div className="filter-item">
+          <label>Status:</label>
+          <select value={filters.status} onChange={(e) => onFilterChange('status', e.target.value)}>
+            {statusOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+          </select>
+        </div>
+        <div className="filter-item">
+          <label>Date:</label>
+          <select value={filters.date} onChange={(e) => onFilterChange('date', e.target.value)}>
+            {dateOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+          </select>
+        </div>
+        <div className="filter-item">
+          <label>Assignment:</label>
+          <select value={filters.assignment} onChange={(e) => onFilterChange('assignment', e.target.value)}>
+            {assignmentOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+          </select>
+        </div>
+        <div className="filter-item">
+          <label>Class:</label>
+          <select value={filters.class} onChange={(e) => onFilterChange('class', e.target.value)}>
+            {classOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+          </select>
+        </div>
+        <div className="filter-item">
+          <label>Source:</label>
+          <select value={filters.source} onChange={(e) => onFilterChange('source', e.target.value)}>
+            {sourceOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+          </select>
+        </div>
+        <div className="filter-item">
+          <label>Sort:</label>
+          <select value={filters.sort} onChange={(e) => onFilterChange('sort', e.target.value)}>
+            {sortOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+          </select>
+        </div>
+      </div>
+      {hasActiveFilters && <button onClick={onClearFilters} className="btn-clear">Clear Filters</button>}
     </div>
   );
 }
@@ -205,22 +251,83 @@ function App() {
   const [selectedLead, setSelectedLead] = useState(null);
   const [showReports, setShowReports] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({
+    status: 'All',
+    date: 'All',
+    assignment: 'All',
+    class: 'All',
+    source: 'All',
+    sort: 'Newest First'
+  });
 
-  // Filter leads based on user role
+  const getDateRange = (filter) => {
+    const today = new Date();
+    switch(filter) {
+      case 'Last 7 days':
+        return new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+      case 'Last 30 days':
+        return new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+      case 'Last 90 days':
+        return new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
+      default:
+        return null;
+    }
+  };
+
   const getVisibleLeads = () => {
     let visible = leads;
     
-    // If counselor, show only assigned leads
     if (user.role === 'user' && !ALLOWED_ASSIGNERS.includes(user.email)) {
       visible = leads.filter(lead => lead.assignedTo === user.email);
     }
     
-    // Apply search filter
+    if (filters.status !== 'All') {
+      visible = visible.filter(lead => lead.status === filters.status.toLowerCase());
+    }
+    
+    if (filters.date !== 'All') {
+      const cutoffDate = getDateRange(filters.date);
+      visible = visible.filter(lead => new Date(lead.date) >= cutoffDate);
+    }
+    
+    if (filters.assignment === 'Assigned') {
+      visible = visible.filter(lead => lead.assignedTo);
+    } else if (filters.assignment === 'Unassigned') {
+      visible = visible.filter(lead => !lead.assignedTo);
+    }
+    
+    if (filters.class !== 'All') {
+      visible = visible.filter(lead => lead.class.includes(filters.class.split('-')[1]?.trim() || filters.class));
+    }
+    
+    if (filters.source !== 'All') {
+      visible = visible.filter(lead => lead.source === filters.source);
+    }
+    
     if (searchTerm) {
       visible = visible.filter(lead => 
         lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         lead.phone.includes(searchTerm)
       );
+    }
+    
+    // Apply sorting
+    switch(filters.sort) {
+      case 'Oldest First':
+        visible.sort((a, b) => new Date(a.date) - new Date(b.date));
+        break;
+      case 'Name A-Z':
+        visible.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case 'Name Z-A':
+        visible.sort((a, b) => b.name.localeCompare(a.name));
+        break;
+      case 'Most Calls':
+        visible.sort((a, b) => (b.calls?.length || 0) - (a.calls?.length || 0));
+        break;
+      case 'Newest First':
+      default:
+        visible.sort((a, b) => new Date(b.date) - new Date(a.date));
     }
     
     return visible;
@@ -250,25 +357,15 @@ function App() {
 
   const handleAssignLead = (leadId, counselorEmail) => {
     if (!counselorEmail) return;
-    
     setLeads(leads.map(lead => {
       if (lead.id === leadId) {
         const newHistory = [...(lead.assignmentHistory || [])];
-        if (lead.assignedTo) {
-          newHistory.push({
-            assignedBy: lead.assignedTo,
-            assignedTo: counselorEmail,
-            date: new Date().toLocaleString(),
-            notes: 'Reassignment'
-          });
-        } else {
-          newHistory.push({
-            assignedBy: user.email,
-            assignedTo: counselorEmail,
-            date: new Date().toLocaleString(),
-            notes: 'Initial assignment'
-          });
-        }
+        newHistory.push({
+          assignedBy: user.email,
+          assignedTo: counselorEmail,
+          date: new Date().toLocaleString(),
+          notes: 'Assignment'
+        });
         return { ...lead, assignedTo: counselorEmail, assignmentHistory: newHistory };
       }
       return lead;
@@ -282,7 +379,7 @@ function App() {
         ? { ...lead, admissionStatus: 'admitted', lockedBy: user.email, lockDate: new Date().toLocaleString() }
         : lead
     ));
-    alert('Lead locked (Admission marked)!');
+    alert('Lead locked!');
   };
 
   const handleUnlockLead = (leadId) => {
@@ -296,24 +393,15 @@ function App() {
 
   const handleExportExcel = () => {
     if (!ALLOWED_EXPORTERS.includes(user.email)) {
-      alert('❌ Only Director and Principal can export data!');
+      alert('Only Directors and Principal can export!');
       return;
     }
-
     const csvContent = [
-      ['ID', 'Name', 'Phone', 'Email', 'Class', 'Source', 'Status', 'Assigned To', 'Total Calls', 'Admission Status', 'Date Added'],
+      ['ID', 'Name', 'Phone', 'Email', 'Class', 'Source', 'Status', 'Assigned To', 'Total Calls', 'Date'],
       ...leads.map(lead => [
-        lead.id,
-        lead.name,
-        lead.phone,
-        lead.email,
-        lead.class,
-        lead.source,
-        lead.status,
+        lead.id, lead.name, lead.phone, lead.email, lead.class, lead.source, lead.status,
         COUNSELORS.find(c => c.email === lead.assignedTo)?.name || 'Unassigned',
-        lead.calls?.length || 0,
-        lead.admissionStatus,
-        lead.date
+        lead.calls?.length || 0, lead.date
       ])
     ].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
 
@@ -321,83 +409,29 @@ function App() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `DPS_CRM_Report_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `DPS_CRM_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
   };
 
   const handleExportReport = () => {
     if (!ALLOWED_EXPORTERS.includes(user.email)) {
-      alert('❌ Only Director and Principal can export reports!');
+      alert('Only Directors and Principal can export!');
       return;
     }
-
-    // Generate comprehensive report
-    const totalLeads = leads.length;
-    const interesteds = leads.filter(l => l.status === 'interested').length;
-    const contacted = leads.filter(l => l.status === 'contacted').length;
-    const admitted = leads.filter(l => l.admissionStatus === 'admitted').length;
-    const totalCalls = leads.reduce((sum, lead) => sum + (lead.calls?.length || 0), 0);
-
-    const reportText = `
-DPS SCHOOL - CRM ANALYSIS REPORT
-Generated: ${new Date().toLocaleString()}
-
-=== OVERALL STATISTICS ===
-Total Leads: ${totalLeads}
-Interested Leads: ${interesteds} (${((interesteds/totalLeads)*100).toFixed(1)}%)
-Contacted Leads: ${contacted} (${((contacted/totalLeads)*100).toFixed(1)}%)
-Admitted Leads: ${admitted} (${((admitted/totalLeads)*100).toFixed(1)}%)
-Total Calls Made: ${totalCalls}
-Average Calls per Lead: ${(totalCalls/totalLeads).toFixed(1)}
-
-=== PER COUNSELOR BREAKDOWN ===
-${COUNSELORS.map(counselor => {
-  const counselorLeads = leads.filter(l => l.assignedTo === counselor.email);
-  const counselorCalls = counselorLeads.reduce((sum, l) => sum + (l.calls?.length || 0), 0);
-  return `
-${counselor.name}:
-  - Assigned Leads: ${counselorLeads.length}
-  - Total Calls: ${counselorCalls}
-  - Interested: ${counselorLeads.filter(l => l.status === 'interested').length}
-  - Contacted: ${counselorLeads.filter(l => l.status === 'contacted').length}
-  - Conversion Rate: ${counselorLeads.length > 0 ? ((counselorLeads.filter(l => l.status === 'interested').length/counselorLeads.length)*100).toFixed(1) : 0}%`;
-}).join('\n')}
-
-=== DETAILED LEAD LIST ===
-${leads.map(lead => `
-Lead: ${lead.name}
-Phone: ${lead.phone}
-Class: ${lead.class}
-Status: ${lead.status}
-Assigned To: ${COUNSELORS.find(c => c.email === lead.assignedTo)?.name || 'Unassigned'}
-Calls Made: ${lead.calls?.length || 0}
-Date Added: ${lead.date}
-Notes: ${lead.notes || 'N/A'}
----`).join('\n')}
-
-=== RECOMMENDATIONS ===
-- Focus on leads with status 'new' for follow-up
-- Check conversion rates per counselor
-- Track call history for effectiveness
-- Regular assignment updates improve efficiency
-
-This report can be analyzed with Claude AI for deeper insights.
-    `;
-
+    const reportText = `DPS SCHOOL CRM REPORT\nGenerated: ${new Date().toLocaleString()}\n\n${leads.map(l => `${l.name} | ${l.phone} | ${l.class} | ${l.status}`).join('\n')}`;
     const blob = new Blob([reportText], { type: 'text/plain' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `DPS_CRM_Analysis_Report_${new Date().toISOString().split('T')[0]}.txt`;
+    a.download = `DPS_Report_${new Date().toISOString().split('T')[0]}.txt`;
     a.click();
   };
 
   const handleImportData = () => {
     if (!ALLOWED_IMPORTERS.includes(user.email)) {
-      alert('❌ Only authorized users can import data!');
+      alert('Only authorized users can import!');
       return;
     }
-
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.csv';
@@ -413,26 +447,21 @@ This report can be analyzed with Claude AI for deeper insights.
             if (!name) return null;
             return {
               id: parseInt(id) || Date.now() + idx,
-              name,
-              phone,
-              email,
-              class: className,
-              source,
+              name, phone, email,
+              class: className, source,
               status: status || 'new',
               notes: '',
               date: new Date().toISOString().split('T')[0],
-              calls: [],
-              reminders: [],
+              calls: [], reminders: [],
               assignedTo: null,
               assignmentHistory: [],
               admissionStatus: 'pending'
             };
           }).filter(Boolean);
-
           setLeads([...leads, ...newLeads]);
-          alert(`✅ Imported ${newLeads.length} leads successfully!`);
+          alert(`Imported ${newLeads.length} leads!`);
         } catch (error) {
-          alert('❌ Error importing data: ' + error.message);
+          alert('Error importing: ' + error.message);
         }
       };
       reader.readAsText(file);
@@ -457,7 +486,7 @@ This report can be analyzed with Claude AI for deeper insights.
       </header>
 
       <div className="toolbar">
-        <input type="text" placeholder="🔍 Search by name or phone..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+        <input type="text" placeholder="🔍 Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
         {canImport && <button onClick={handleImportData} className="btn-secondary">📥 Import</button>}
         {canExport && <button onClick={handleExportExcel} className="btn-secondary">📊 Export Excel</button>}
         {canExport && <button onClick={handleExportReport} className="btn-secondary">📋 Export Report</button>}
@@ -465,64 +494,37 @@ This report can be analyzed with Claude AI for deeper insights.
         <button onClick={handleAddLead} className="btn-primary">➕ Add Lead</button>
       </div>
 
+      <FilterSection filters={filters} onFilterChange={(key, value) => setFilters({...filters, [key]: value})} onClearFilters={() => setFilters({status: 'All', date: 'All', assignment: 'All', class: 'All', source: 'All', sort: 'Newest First'})} />
+
       {showReports && (
         <div className="reports-section">
           <h2>📊 Detailed Reports</h2>
           <div className="report-cards">
-            <div className="report-card">
-              <h3>Total Leads</h3>
-              <p className="big-number">{visibleLeads.length}</p>
-            </div>
-            <div className="report-card">
-              <h3>Interested</h3>
-              <p className="big-number">{visibleLeads.filter(l => l.status === 'interested').length}</p>
-            </div>
-            <div className="report-card">
-              <h3>Contacted</h3>
-              <p className="big-number">{visibleLeads.filter(l => l.status === 'contacted').length}</p>
-            </div>
-            <div className="report-card">
-              <h3>Total Calls</h3>
-              <p className="big-number">{visibleLeads.reduce((sum, l) => sum + (l.calls?.length || 0), 0)}</p>
-            </div>
+            <div className="report-card"><h3>Total Leads</h3><p className="big-number">{visibleLeads.length}</p></div>
+            <div className="report-card"><h3>Interested</h3><p className="big-number">{visibleLeads.filter(l => l.status === 'interested').length}</p></div>
+            <div className="report-card"><h3>Contacted</h3><p className="big-number">{visibleLeads.filter(l => l.status === 'contacted').length}</p></div>
+            <div className="report-card"><h3>Total Calls</h3><p className="big-number">{visibleLeads.reduce((sum, l) => sum + (l.calls?.length || 0), 0)}</p></div>
           </div>
-
-          {ALLOWED_EXPORTERS.includes(user.email) && (
-            <div className="counselor-reports">
-              <h3>👥 Per Counselor Analysis</h3>
-              {COUNSELORS.map(counselor => {
-                const counselorLeads = leads.filter(l => l.assignedTo === counselor.email);
-                if (counselorLeads.length === 0) return null;
-                const calls = counselorLeads.reduce((sum, l) => sum + (l.calls?.length || 0), 0);
-                const interested = counselorLeads.filter(l => l.status === 'interested').length;
-                return (
-                  <div key={counselor.email} className="counselor-card">
-                    <h4>{counselor.name}</h4>
-                    <p>Leads: {counselorLeads.length} | Calls: {calls} | Interested: {interested} | Conversion: {((interested/counselorLeads.length)*100).toFixed(1)}%</p>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
       )}
 
       <div className="leads-list">
-        {visibleLeads.map(lead => (
-          <div key={lead.id} className={`lead-card ${lead.admissionStatus === 'admitted' ? 'locked' : ''}`} onClick={() => setSelectedLead(lead)}>
-            <div className="lead-header">
-              <h3>{lead.name} {lead.admissionStatus === 'admitted' && '🔒'}</h3>
-              <span className={`status-badge ${lead.status}`}>{lead.status}</span>
+        {visibleLeads.length === 0 ? (
+          <div className="no-leads">No leads found. Try adjusting your filters.</div>
+        ) : (
+          visibleLeads.map(lead => (
+            <div key={lead.id} className={`lead-card ${lead.admissionStatus === 'admitted' ? 'locked' : ''}`} onClick={() => setSelectedLead(lead)}>
+              <div className="lead-header">
+                <h3>{lead.name} {lead.admissionStatus === 'admitted' && '🔒'}</h3>
+                <span className={`status-badge ${lead.status}`}>{lead.status}</span>
+              </div>
+              <p>📞 {lead.phone}</p>
+              <p>📚 {lead.class}</p>
+              <p>👤 {COUNSELORS.find(c => c.email === lead.assignedTo)?.name || 'Unassigned'}</p>
+              <p className="lead-date">📅 {lead.date}</p>
             </div>
-            <p>📞 {lead.phone}</p>
-            <p>📚 {lead.class}</p>
-            <p>👤 {COUNSELORS.find(c => c.email === lead.assignedTo)?.name || 'Unassigned'}</p>
-            <div className="lead-badges">
-              <span className="badge">📞 {lead.calls?.length || 0} calls</span>
-              <span className="badge">⏰ {lead.reminders?.length || 0} reminders</span>
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
       {selectedLead && (
@@ -530,10 +532,11 @@ This report can be analyzed with Claude AI for deeper insights.
           lead={selectedLead} 
           onClose={() => setSelectedLead(null)} 
           user={user}
+          onAddCall={() => {}}
+          onAddReminder={() => {}}
           onAssign={handleAssignLead}
           onLock={handleLockLead}
           onUnlock={handleUnlockLead}
-          leads={leads}
         />
       )}
     </div>
